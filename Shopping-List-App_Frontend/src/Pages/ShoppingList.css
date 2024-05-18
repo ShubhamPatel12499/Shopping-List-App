@@ -55,6 +55,26 @@ h2 {
   cursor: pointer;
 }
 
+.input-container button:hover {
+  background-color: #ff4040;
+}
+
+.input-container .update-button {
+  background-color: #28a745;
+}
+
+.input-container .update-button:hover {
+  background-color: #218838;
+}
+
+.input-container .cancel-button {
+  background-color: #6c757d;
+}
+
+.input-container .cancel-button:hover {
+  background-color: #5a6268;
+}
+
 ul {
   list-style-type: none;
   padding: 0;

@@ -47,8 +47,9 @@ const ShoppingList = () => {
           body: JSON.stringify({ name: inputValue, purchased: false, description, imageUrl }),
         });
         if (response.ok) {
-          const newItem = await response.json();
-          setItems([...items, { id: newItem.name, name: inputValue, purchased: false, description, imageUrl }]);
+          const data = await response.json();
+          const newItem = { id: data.name, name: inputValue, purchased: false, description, imageUrl };
+          setItems([...items, newItem]);
           setInputValue('');
           setDescription('');
           setImageUrl('');
@@ -64,33 +65,26 @@ const ShoppingList = () => {
 
   const togglePurchased = async (id) => {
     try {
-      const updatedItems = items.map((item) => {
-        if (item.id === id) {
-          const updatedItem = { ...item, purchased: !item.purchased };
-          if (updatedItem.purchased) {
-            toast.success(`Item "${updatedItem.name}" is selected!`);
-          } else {
-            toast.info(`Item "${updatedItem.name}" is not selected!`);
-          }
-          return updatedItem;
-        }
-        return item;
-      });
-      setItems(updatedItems);
-      await fetch(`https://shopping-list-app-c801a-default-rtdb.firebaseio.com/lists/${id}.json`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ purchased: !items.find((item) => item.id === id).purchased }),
-      });
+      const itemToToggle = items.find((item) => item.id === id);
+      if (itemToToggle) {
+        const updatedItem = { ...itemToToggle, purchased: !itemToToggle.purchased };
+        await fetch(`https://shopping-list-app-c801a-default-rtdb.firebaseio.com/lists/${id}.json`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ purchased: updatedItem.purchased }),
+        });
+        setItems(items.map((item) => (item.id === id ? updatedItem : item)));
+        updatedItem.purchased ? toast.success(`Item "${updatedItem.name}" is selected!`) : toast.info(`Item "${updatedItem.name}" is not selected!`);
+      }
     } catch (error) {
       console.error('Error toggling item:', error);
     }
   };
 
   const editItemHandler = (id, name, description, imageUrl) => {
-    setEditItem({ id, name });
+    setEditItem({ id, name, description, imageUrl });
     setInputValue(name);
     setDescription(description);
     setImageUrl(imageUrl);
@@ -106,13 +100,7 @@ const ShoppingList = () => {
           },
           body: JSON.stringify({ name: inputValue, description, imageUrl }),
         });
-        const updatedItems = items.map((item) => {
-          if (item.id === editItem.id) {
-            return { ...item, name: inputValue, description, imageUrl };
-          }
-          return item;
-        });
-        setItems(updatedItems);
+        setItems(items.map((item) => (item.id === editItem.id ? { ...item, name: inputValue, description, imageUrl } : item)));
         setInputValue('');
         setDescription('');
         setImageUrl('');
@@ -124,13 +112,19 @@ const ShoppingList = () => {
     }
   };
 
+  const cancelEdit = () => {
+    setEditItem(null);
+    setInputValue('');
+    setDescription('');
+    setImageUrl('');
+  };
+
   const deleteItem = async (id) => {
     try {
       await fetch(`https://shopping-list-app-c801a-default-rtdb.firebaseio.com/lists/${id}.json`, {
         method: 'DELETE',
       });
-      const updatedItems = items.filter((item) => item.id !== id);
-      setItems(updatedItems);
+      setItems(items.filter((item) => item.id !== id));
       toast.error('Item deleted successfully!');
     } catch (error) {
       console.error('Error deleting item:', error);
@@ -140,7 +134,7 @@ const ShoppingList = () => {
   return (
     <div className="container">
       <div className="input-container">
-      <h2>Shopping List</h2>
+        <h2>Shopping List</h2>
         <input
           type="text"
           value={inputValue}
@@ -160,9 +154,14 @@ const ShoppingList = () => {
           placeholder="Enter image URL"
         />
         {editItem ? (
-          <button onClick={updateItem}>
-            <FaEdit /> 
-          </button>
+          <div>
+            <button onClick={updateItem} className="update-button">
+              <FaEdit /> Update
+            </button>
+            <button onClick={cancelEdit} className="cancel-button">
+              Cancel
+            </button>
+          </div>
         ) : (
           <button onClick={addItem}>
             Add Item
@@ -196,8 +195,9 @@ const ShoppingList = () => {
         ))}
       </div>
       <ToastContainer />
-    </div>
+    </div>   
   );
 };
 
 export default ShoppingList;
+
